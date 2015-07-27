@@ -1,6 +1,7 @@
 import psycopg2
+from . import pydbreflection
 
-class DBA2(object):
+class DBA2(pydbreflection.PyDBReflection_base):
     def __init__(self, connect, reflect = True):
         self.connect = connect
         self.schema = {}

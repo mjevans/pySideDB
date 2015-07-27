@@ -1,11 +1,26 @@
 from importlib import import_module
 
-glbl_pydbreflection_classes = dict() # None
 glbl_pydbreflection_adapters = dict() #None
 
-class PyDBReflection(object):
-    """
+def get_adapter(connect = None, db_type = None, config = None):
+        if config is None:
+            config = PyDBReflection_base.get_config_defaults()['pydbreflection']
+        else:
+            config = config
+        if connect is not None:
+            config['connect'] = connect
+        if db_type is not None:
+            config['db_type'] = db_type
+        db_type = config['db_type']
+        if db_type not in glbl_pydbreflection_adapters:
+            glbl_pydbreflection_adapters[db_type] = import_module(
+                '..adapter_%s' % (db_type), __name__ )
+        return glbl_pydbreflection_adapters[db_type].DBA2
 
+class PyDBReflection_base(object):
+    """
+    Introspect the structure of the database, and present a more end user
+    friendly way of modifying the structure (TODO) and data.
     """
     def __init__(self, connect = None, db_type = None, config = None):
         if config is None:
@@ -17,38 +32,9 @@ class PyDBReflection(object):
         if db_type is not None:
             self.config['db_type'] = db_type
         self.last_reflection = 0.0
-    @staticmethod
-    def get_config_defaults():
-        return { 'pydbreflection': {
-            #'': '',
-            'db_type':      'psycopg2',
-            'connect':      'dbname=pysidedb_devdb',
-            'cache_period': 1800
-        }}
-    def get_reflector(self):
-        db_type = self.config['db_type']
-        if db_type not in glbl_pydbreflection_adapters:
-            glbl_pydbreflection_adapters[db_type] = import_module(
-                '..adapter_%s' % (db_type), __name__ )
-        if 'PyDBReflection' + db_type not in glbl_pydbreflection_classes:
-
-            ### FIXME ### This won't work, refactor this module to simplify.
-
-            glbl_pydbreflection_classes['PyDBReflection' + db_type] = type(
-                'PyDBReflection' + db_type,
-                 (object, glbl_pydbreflection_adapters[db_type], type(self)),
-                 dict())
-        return glbl_pydbreflection_classes['PyDBReflection' + db_type]
     #def refresh_columns(self):
     #    # FIXME: Remove if no universal callbacks are desired for this function.
     #    pass
-    @staticmethod
-    def test_is_this_pk(column, table = '', schema = ''):
-        return (column == 'id' or column == 'pk' or
-                column == '_'.join(table, 'id') or
-                column == '_'.join(table, 'pk') or
-                column == '_'.join(schema, table, 'id') or
-                column == '_'.join(schema, table, 'pk'))
     def update_reflection(self, force_refresh = False):
         if force_refresh or (self.last_reflection + self.config['cache_period']):
             self.refresh_columns()
@@ -80,3 +66,18 @@ class PyDBReflection(object):
                 self.schema[schema][table]['table_type_guess'] = 'unknown'
 
             # FIXME: Config in DB, update defaults? -- at outermost layer
+    @staticmethod
+    def get_config_defaults():
+        return { 'pydbreflection': {
+            #'': '',
+            'db_type':      'psycopg2',
+            'connect':      'dbname=pysidedb_devdb',
+            'cache_period': 1800
+        }}
+    @staticmethod
+    def test_is_this_pk(column, table = '', schema = ''):
+        return (column == 'id' or column == 'pk' or
+                column == '_'.join(table, 'id') or
+                column == '_'.join(table, 'pk') or
+                column == '_'.join(schema, table, 'id') or
+                column == '_'.join(schema, table, 'pk'))
