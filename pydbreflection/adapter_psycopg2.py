@@ -2,16 +2,17 @@ import psycopg2
 from . import pydbreflection
 
 class DBA2(pydbreflection.PyDBReflection_base):
-    def __init__(self, connect, reflect = True):
-        self.connect = connect
+    def __init__(self, connect = None, reflect = False):
+        super().__init__(connect = connect)
+        if connect is not None:
+            self.config['connect'] = connect
         self.schema = {}
         self.table_ref = {}
         if True == reflect:
             self.refresh_reflection()
-        super().__init__(connect = connect, db_type = "psycopg2")
     def get_conn(self):
         try:
-            pg = psycopg2.connect(self.connect)
+            pg = psycopg2.connect(self.config['connect'])
             pg.autocommit = True
             """Required for CREATE DATABASE, probably for all CREATE statements
 
@@ -31,18 +32,21 @@ class DBA2(pydbreflection.PyDBReflection_base):
             pc.execute("""SELECT table_schema,
                                  table_name,
                                  column_name,
+                                 ordinal_position,
                                  is_nullable,
+                                 is_updatable,
                                  data_type
                           FROM information_schema.columns
                           WHERE table_schema NOT IN ('information_schema',
                                                      'pg_catalog');""")
             self.schema = {}
             self.table_ref = {}
-            for (schema, table, column, canhasnull, dtype) in pc:
+            for (schema, table, column, ordinal_position,
+                    canhasnull, canhasupdate, dtype) in pc:
                 if schema not in self.schema:
                     self.schema[schema] = {}
                 if table not in self.schema[schema]:
-                    self.schema[schema][table] = {column: {}}
+                    self.schema[schema][table] = {'column': {}}
                 if table not in self.table_ref:
                     self.table_ref[table] = {}
                 st = '.'.join((schema, table))
@@ -52,6 +56,10 @@ class DBA2(pydbreflection.PyDBReflection_base):
                     cnull = True
                 else:
                     cnull = False
+                if "YES" == canhasupdate:
+                    cupdate = True
+                else:
+                    cupdate = False
                 # FIXME: how does py3 psycopg2 handle pg json/jsonb/XML?
                 if   dtype in ('bigint', 'bigserial', 'integer',
                                'int8', 'serial8', 'int', 'int4',
@@ -84,8 +92,15 @@ class DBA2(pydbreflection.PyDBReflection_base):
                     ctype = 'uuid'
                 else:
                     ctype = 'other'
-                self.schema[schema][table]['column'][column] = {
-                    'null': cnull, 'type': ctype}
+                coldata = {
+                        'name': column,
+                        'null': cnull,
+                        'type': ctype,
+                        'ordinal_position': ordinal_position,
+                        'writable': cupdate
+                        }
+                #self.schema[schema][table]['column'][ordinal_position] = coldata
+                self.schema[schema][table]['column'][column] = coldata
             pg.close()
             # super().refresh_columns()
         except (psycopg2.Error, ) as e:
