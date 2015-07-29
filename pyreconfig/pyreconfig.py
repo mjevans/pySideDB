@@ -1,8 +1,9 @@
+from sys import stderr
 from os import getcwd, environ
 from os.path import expanduser, exists, join
 import json
 
-__debug = False
+_debug = False
 
 class pyreconfig(object):
     """
@@ -59,16 +60,20 @@ class pyreconfig(object):
                 _r.update(self.config[csrc][section_name])
         return _r
 
-    def __load_config(self, section_name, path):
+    def _load_config(self, section_name, path):
         """
         Internal function.
         """
         try:
             #self.config[section_name] = dict()
+            if _debug:
+                print("config [%s] = %s" % (section_name, path), file=stderr)
             if exists(path):
                 nfp = open(path)
                 self.config[section_name] = json.load(nfp)
                 nfp.close()
+                if _debug:
+                    print("done [%s] = %s" % (section_name, path), file=stderr)
         except (Exception,) as e:
             if __debug:
                 raise e
@@ -85,32 +90,33 @@ class pyreconfig(object):
 
         if name is None:
             name = __name__
+        print("reloading configs for: %s, cwd = '%s', home = '%s'" % (name, cwd, home), file=stderr)
         nw = name + '.cfg'
         nu = '.' + name
 
-        self.__load_config('000', join(cwd, nw))
-        self.__load_config('001', join(cwd, nu))
+        self._load_config('000', join(cwd, nw))
+        self._load_config('001', join(cwd, nu))
 
         # XDG Directories; BSD/Linux
         if 'XDG_CONFIG_HOME' in environ:
-            self.__load_config('002', join(
+            self._load_config('002', join(
                     join(expanduser(environ['XDG_CONFIG_HOME']), name, nw)))
         elif exists(join(expanduser('~/Library/Preferences'), name)):
-            self.__load_config('002',
+            self._load_config('002',
                     join(expanduser('~/Library/Preferences'),
                     __name__ + '.at.github.com.plist'))
         elif 'HOME' in environ:
-            self.__load_config('002', join(
+            self._load_config('002', join(
                     join(expanduser(environ['HOME']), '.config', name, nw)))
 
         if 'XDG_CONFIG_DIRS' in environ:
             ibase = 3
             for base in environ['XDG_CONFIG_DIRS'].split(':'):
-                self.__load_config('%03i' % (ibase),
+                self._load_config('%03i' % (ibase),
                     join(expanduser(base), name, nw))
                 ibase += 1
         elif exists('/etc/xdg'):
-            self.__load_config('003', join('/etc/xdg', name, nw))
+            self._load_config('003', join('/etc/xdg', name, nw))
 
-        self.__load_config('110', join(home, nw))
-        self.__load_config('111', join(home, nu))
+        self._load_config('110', join(home, nw))
+        self._load_config('111', join(home, nu))
