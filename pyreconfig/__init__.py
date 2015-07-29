@@ -8,11 +8,12 @@ except (Exception, ) as e:
     except (Exception, ) as e:
         pass
 
-#import reconfig_factory
-import * from reconfig
+from . import pyreconfig
 
 __version__ = '0.0.1-alpha1'
 
 __author__ = 'Michael J. Evans <mjevans1983@gmail.com>'
 
-__all__ = ['reconfig', ]
+__all__ = ['pyreconfig', ]
+
+__license__ = 'LGPL 3+'

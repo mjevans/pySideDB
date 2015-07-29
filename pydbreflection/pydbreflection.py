@@ -7,7 +7,7 @@ glbl_pydbreflection_adapters = dict() #None
 
 def get_adapter(connect = None, db_type = None, config = None):
         if config is None:
-            config = PyDBReflection_base.get_config_defaults()['pydbreflection']
+            config = PyDBReflection_base.get_config_defaults()
         else:
             config = config
         if connect is not None:
@@ -27,7 +27,7 @@ class PyDBReflection_base(object):
     """
     def __init__(self, connect = None, db_type = None, config = None):
         if config is None:
-            self.config = self.get_config_defaults()['pydbreflection']
+            self.config = self.get_config_defaults()
         else:
             self.config = config
         if connect is not None:
@@ -92,14 +92,14 @@ class PyDBReflection_base(object):
             # FIXME: Config in DB, update defaults? -- at outermost layer
     @staticmethod
     def get_config_defaults():
-        return { 'pydbreflection': {
+        return {
             #'': '',
             'db_type':      'psycopg2',
             'connect':      'dbname=pysidedb_devdb',
             'cache_period': 1800,
             'glue_pattern': '_',
             'view_suffix':  'list,view'
-        }}
+        }
     @staticmethod
     def test_is_this_pk(column, table = '', schema = ''):
         return (column == 'id' or column == 'pk' or
